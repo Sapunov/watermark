@@ -90,7 +90,10 @@ def watermark_file(input_file, output_file, text, font_file, **kwargs):
     original = Image.open(input_file)
 
     # Обработка параметров
-    kwargs["quality"] = kwargs.get("quality", 100)
+    try:
+        quality = kwargs.pop("quality")
+    except KeyError:
+        quality = 100
 
     if original.format == "TIFF":
         with TiffImagePlugin.AppendingTiffWriter(output_file, True) as tif:
@@ -106,7 +109,7 @@ def watermark_file(input_file, output_file, text, font_file, **kwargs):
                 tif.newFrame()
     elif original.format in ("PNG", "JPG", "JPEG"):
         out = watermark_image(original, text, font_file, **kwargs)
-        out.save(output_file, quality=kwargs["quality"])
+        out.save(output_file, quality=quality)
     else:
         raise UnsupportedFileExtension(
             "Format {0} not supported".format(original.format))
