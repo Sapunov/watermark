@@ -11,6 +11,11 @@ WHITE = 255
 FULL_TRANSPARENT = 0
 
 
+class UnsupportedFileExtension(Exception):
+
+    pass
+
+
 def calc_num_per_line(line_width, text_width):
     """Вычисляет количество текстов заданной длины в строке"""
 
@@ -84,8 +89,11 @@ def watermark_file(input_file, output_file, text, font_file, **kwargs):
 
     original = Image.open(input_file)
 
+    # Обработка параметров
+    kwargs["quality"] = kwargs.get("quality", 100)
+
     if original.format == "TIFF":
-        with TiffImagePlugin.AppendingTiffWriter(output_file, True) as tf:
+        with TiffImagePlugin.AppendingTiffWriter(output_file, True) as tif:
             for i in range(original.n_frames):
                 original.seek(i)
 
@@ -94,14 +102,14 @@ def watermark_file(input_file, output_file, text, font_file, **kwargs):
                 #
                 out = watermark_image(original, text, font_file, **kwargs)
 
-                out.save(tf)
-                tf.newFrame()
-    elif original.format in ("PNG", "JPG"):
-        #
-        # Вот тут можно компрессию если надо
-        #
+                out.save(tif)
+                tif.newFrame()
+    elif original.format in ("PNG", "JPG", "JPEG"):
         out = watermark_image(original, text, font_file, **kwargs)
-        out.save(output_file)
+        out.save(output_file, quality=kwargs["quality"])
+    else:
+        raise UnsupportedFileExtension(
+            "Format {0} not supported".format(original.format))
 
 
 def main():
