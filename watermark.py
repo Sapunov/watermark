@@ -62,7 +62,8 @@ def watermark_image(image_obj, text, font_file, angle=45,
     wrapper_w = line_w
     wrapper_h = line_h_with_padding * num_of_lines
 
-    watermark_layer = Image.new("RGBA", (wrapper_w, wrapper_h), (WHITE, WHITE, WHITE, FULL_TRANSPARENT))
+    watermark_layer = Image.new(
+        "RGBA", (wrapper_w, wrapper_h), (WHITE, WHITE, WHITE, FULL_TRANSPARENT))
     watermark_layer_draw = ImageDraw.Draw(watermark_layer)
 
     opacity = int(text_opacity * OPACITY_COEF)
@@ -90,22 +91,19 @@ def watermark_file(input_file, output_file, text, font_file, **kwargs):
     original = Image.open(input_file)
 
     # Обработка параметров
-    try:
-        quality = kwargs.pop("quality")
-    except KeyError:
-        quality = 100
+    quality = kwargs.pop("quality")
+    compress = kwargs.pop("compress")
 
     if original.format == "TIFF":
         with TiffImagePlugin.AppendingTiffWriter(output_file, True) as tif:
             for i in range(original.n_frames):
                 original.seek(i)
 
-                #
-                # Вот тут можно компрессию если надо
-                #
                 out = watermark_image(original, text, font_file, **kwargs)
 
-                out.save(tif)
+                compression = "jpeg" if compress else "None"
+
+                out.save(tif, compression=compression, quality=quality)
                 tif.newFrame()
     elif original.format in ("PNG", "JPG", "JPEG"):
         out = watermark_image(original, text, font_file, **kwargs)
@@ -118,14 +116,39 @@ def watermark_file(input_file, output_file, text, font_file, **kwargs):
 def main():
 
     parser = argparse.ArgumentParser(description="Create image with text watermark")
-    parser.add_argument("-i", "--input", help="Input file or directory", required=True, type=str)
-    parser.add_argument("-o", "--output", help="Output file or directory", required=True, type=str)
-    parser.add_argument("-t", "--text", help="Text for watermark", required=True, type=str)
-    parser.add_argument("--font", help="Font filename", required=True, type=str)
+    parser.add_argument("-i", "--input",
+                        help="Input file or directory",
+                        required=True,
+                        type=str)
+    parser.add_argument("-o", "--output",
+                        help="Output file or directory",
+                        required=True,
+                        type=str)
+    parser.add_argument("-t", "--text",
+                        help="Text for watermark",
+                        required=True,
+                        type=str)
+    parser.add_argument("--font",
+                        help="Font filename",
+                        required=True,
+                        type=str)
+    parser.add_argument("--quality",
+                        help="JPEG compression quality",
+                        type=int,
+                        default=100)
+    parser.add_argument("--compress",
+                        help="Whether enable JPEG compression. For TIFF only",
+                        action="store_true")
 
     args = parser.parse_args()
 
-    watermark_file(args.input, args.output, args.text, args.font)
+    watermark_file(
+        args.input,
+        args.output,
+        args.text,
+        args.font,
+        quality=args.quality,
+        compress=args.compress)
 
 
 if __name__ == "__main__":
