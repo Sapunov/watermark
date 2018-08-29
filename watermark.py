@@ -108,6 +108,7 @@ def watermark_file(input_file, output_file, text, font_file, **kwargs):
     # Обработка параметров
     quality = kwargs.pop("quality")
     compress = kwargs.pop("compress")
+    resize = kwargs.pop("resize")
 
     if original.format == TIFF:
         with TiffImagePlugin.AppendingTiffWriter(output_file, True) as tif:
@@ -117,6 +118,11 @@ def watermark_file(input_file, output_file, text, font_file, **kwargs):
                 out = watermark_image(original, text, font_file, **kwargs)
 
                 compression = "jpeg" if compress else "None"
+
+                if resize:
+                    xs, ys = out.size
+                    ratio = resize / xs
+                    out.thumbnail((xs * ratio, ys * ratio), Image.ANTIALIAS)
 
                 out.save(tif, compression=compression, quality=quality)
                 tif.newFrame()
@@ -187,6 +193,10 @@ def main():
     parser.add_argument("--compress",
                         help="Whether enable JPEG compression. For TIFF only",
                         action="store_true")
+    parser.add_argument("--resize",
+                        help="Resize and specify longest side",
+                        type=int,
+                        default=None)
     parser.add_argument("--angle", help="Text angle", type=int, default=45)
     parser.add_argument("--text_opacity", help="Text opacity", type=int, default=20)
     parser.add_argument("--fill_color", help="Fill color. RGB digit", type=int, default=220)
@@ -221,7 +231,8 @@ def main():
                     fill_color=args.fill_color,
                     fontsize=args.fontsize,
                     padding=args.padding,
-                    space_interval=args.space_interval)
+                    space_interval=args.space_interval,
+                    resize=args.resize)
     else:
         watermark_file(
             args.input,
